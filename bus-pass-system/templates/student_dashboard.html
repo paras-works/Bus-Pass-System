@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block styles %}
+body{
+    margin:0;
+    font-family:sans-serif;
+    background: url('{{ url_for('static', filename='images/bg-student.jpeg') }}') no-repeat center center fixed;
+    background-size: cover;
+}
+
+.topbar{
+    background: rgba(0, 0, 0, 0.5);
+    color:white;
+    padding:6px;
+    overflow:hidden;
+    white-space:nowrap;
+}
+.topbar span{
+    display:inline-block;
+    padding-left:100%;
+    animation:bus 8s linear infinite;
+}
+@keyframes bus{
+    0%{transform:translateX(0);}
+    100%{transform:translateX(-100%);}
+}
+
+.sidebar{
+   background: rgba(0, 0, 0, 0.5);
+    height:100vh;
+    padding:20px;
+    color:white;
+}
+.sidebar a{
+    display:block;
+    color:white;
+    text-decoration:none;
+    margin:10px 0;
+    padding:8px;
+    border-radius:5px;
+    transition:0.3s;
+}
+.sidebar a:hover{
+    background:#dc3545;
+    transform:translateX(5px);
+}
+
+.content{
+    padding:25px;
+    animation:fade 0.5s ease;
+}
+@keyframes fade{
+    from{opacity:0;}
+    to{opacity:1;}
+}
+.card-box{
+background:white;
+padding:20px;
+border-radius:10px;
+box-shadow:0 4px 10px rgba(0,0,0,0.1);
+}
+.status-badge{ font-size: 0.95rem; padding: 6px 12px; }
+{% endblock %}
+
+{% block body %}
+<div class="topbar">
+<span>🚌 Bus Pass System Dashboard • Welcome 🚌</span>
+</div>
+
+<div class="container-fluid">
+<div class="row">
+
+{% include "_student_sidebar.html" %}
+
+<div class="col-md-10 content">
+
+<div id="msgBox" class="alert alert-success" style="display:none;"></div>
+
+<div class="card-box">
+<h2>Dashboard</h2>
+<p>Welcome to your Bus Pass System 🚀</p>
+
+<div id="statusArea" class="mt-3"></div>
+</div>
+
+</div>
+
+</div>
+</div>
+
+<footer style="background: rgba(0, 0, 0, 0.5); color:white; text-align:center; padding:15px; position:fixed; bottom:0; width:100%;">
+</footer>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+// ================= 📦 LOAD DASHBOARD DATA FROM MYSQL (via API) =================
+// Everything that used to be read out of localStorage.getItem("requests")
+// now comes from GET /api/student/dashboard, which reads the
+// pass_requests / bus_passes tables in MySQL.
+async function loadDashboard() {
+    const user = await requireStudentLogin();
+    if (!user) return;
+
+    const data = await apiRequest("/api/student/dashboard");
+    const statusArea = document.getElementById("statusArea");
+
+    if (data.has_approved_unpaid) {
+        document.getElementById("paymentMenu").style.display = "block";
+
+        if (!sessionStorage.getItem("approvalAlertShown")) {
+            const box = document.getElementById("msgBox");
+            box.style.display = "block";
+            box.innerText = "✅ Your pass request is approved! Go to Payment to finish.";
+            sessionStorage.setItem("approvalAlertShown", "true");
+        }
+    }
+
+    if (data.active_pass) {
+        statusArea.innerHTML = `
+            <p><b>Active Pass:</b> ${escapeHtml(data.active_pass.pass_number)}</p>
+            <p><b>Route:</b> ${escapeHtml(data.active_pass.from_city)} → ${escapeHtml(data.active_pass.to_city)}</p>
+            <p><b>Valid Until:</b> ${formatDate(data.active_pass.valid_until)}</p>
+        `;
+    } else if (data.latest_request) {
+        const r = data.latest_request;
+        let badgeClass = "bg-secondary";
+        if (r.status === "approved") badgeClass = "bg-primary";
+        if (r.status === "paid") badgeClass = "bg-success";
+        if (r.status === "rejected") badgeClass = "bg-danger";
+
+        statusArea.innerHTML = `
+            <p><b>Latest Application:</b> ${escapeHtml(r.from_city)} → ${escapeHtml(r.to_city)}</p>
+            <p><b>Status:</b> <span class="badge ${badgeClass} status-badge">${r.status}</span></p>
+        `;
+    } else {
+        statusArea.innerHTML = `<p>You haven't applied for a bus pass yet. Use "Pass Form" to apply.</p>`;
+    }
+}
+
+loadDashboard();
+
+</script>
+{% endblock %}

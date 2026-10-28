@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Payments{% endblock %}
+
+{% block styles %}
+      body{
+    margin:0;
+    font-family:sans-serif;
+    background:#fff;
+    color:white;
+}
+.sidebar{
+    background:#0a1628;
+    height:100vh;
+    color:white;
+    padding:20px;
+}
+.sidebar h4{ margin-bottom:20px; }
+.sidebar a{
+    display:block;
+    color:white;
+    text-decoration:none;
+    margin:10px 0;
+    padding:8px;
+    border-radius:5px;
+    transition:0.2s;
+}
+.sidebar a:hover{ background:#0d6efd; }
+.header{
+    background:#0a1628;
+    color:white;
+    padding:10px;
+    text-align:center;
+    border-radius:5px;
+    margin-bottom:20px;
+}
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #fff; padding: 10px; text-align: center; }
+        th { background: #1c2a48; }
+        tr:nth-child(even) { background: #2a3a5a; }
+        tr:nth-child(odd) { background: #1f304d; }
+    
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+
+        {% include "_admin_sidebar.html" %}
+
+        <div class="col-md-10 container">
+            <div class="header">
+                <h3>Payments</h3>
+            </div>
+
+            <div class="table-responsive">
+<table id="paymentsTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Amount</th>
+                        <th>Payment Method</th>
+                        <th>Transaction ID</th>
+                        <th>Paid At</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+</div>
+<footer style="background:#0c1b33; color:white; text-align:center; padding:15px; position:fixed; bottom:0; width:100%; box-shadow: 0 -2px 5px rgba(0,0,0,0.2);">
+</footer>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+// ================= 📊 LOAD PAYMENTS FROM MYSQL =================
+// GET /api/admin/payments joins the payments table with users so the
+// student's name/email come along with each row - no lookups needed
+// on the frontend.
+async function loadPayments() {
+    const admin = await requireAdminLogin();
+    if (!admin) return;
+
+    const result = await apiRequest("/api/admin/payments");
+    const tbody = document.querySelector("#paymentsTable tbody");
+    tbody.innerHTML = "";
+
+    if (!result.payments || result.payments.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6">No Payments Found</td></tr>`;
+        return;
+    }
+
+    result.payments.forEach(p => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${escapeHtml(p.student_name)}</td>
+            <td>${escapeHtml(p.student_email)}</td>
+            <td>₹${p.amount}</td>
+            <td>${escapeHtml(p.payment_method)}</td>
+            <td>${escapeHtml(p.transaction_id)}</td>
+            <td>${p.paid_at}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+loadPayments();
+
+</script>
+{% endblock %}

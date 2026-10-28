@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Bus Pass System{% endblock %}</title>
+{# Pages that do not use Bootstrap (the student login page) replace this block with an empty one. #}
+{% block bootstrap %}<link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">{% endblock %}
+
+{# Each page puts its own CSS in this block #}
+<style>
+{% block styles %}{% endblock %}
+</style>
+{# Small-screen fixes shared by every page (loaded last so it can override) #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
+</head>
+
+<body>
+{% block body %}{% endblock %}
+
+<script src="{{ url_for('static', filename='js/api.js') }}"></script>
+{# Each page puts its own JavaScript in this block #}
+{% block scripts %}{% endblock %}
+</body>
+</html>

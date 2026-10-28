@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Routes{% endblock %}
+
+{% block styles %}
+body{
+    margin:0;
+    font-family:sans-serif;
+    background:#fff;
+    color:white;
+}
+.sidebar{
+    background:#0a1628;
+    height:100vh;
+    color:white;
+    padding:20px;
+}
+.sidebar h4{ margin-bottom:20px; }
+.sidebar a{
+    display:block;
+    color:white;
+    text-decoration:none;
+    margin:10px 0;
+    padding:8px;
+    border-radius:5px;
+    transition:0.2s;
+}
+.sidebar a:hover{ background:#0d6efd; }
+.header{
+    background:#0a1628;
+    color:white;
+    padding:10px;
+    text-align:center;
+    border-radius:5px;
+    margin-bottom:20px;
+}
+.box{
+    max-width:500px;
+    margin:auto;
+    padding:20px;
+    border-radius:10px;
+    background:#1c2a48;
+    margin-bottom: 25px;
+}
+.box input, .box label, .box button{ color:white; }
+.box input::placeholder{ color: #ccc; }
+.btn-success{ background:#0d6efd; border:none; }
+.btn-secondary{ background:#444; border:none; }
+
+.card{ background:#1c2a48; border-radius:12px; padding:15px; }
+.table thead{ background:#24365b; color:white; }
+.table tbody tr:nth-child(even){ background:#1c2a48; color:white; }
+.table tbody tr:nth-child(odd){ background:#2a3a5a; color:white; }
+.badge-active{ background:#198754; }
+.badge-inactive{ background:#6c757d; }
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+<div class="row">
+
+{% include "_admin_sidebar.html" %}
+
+<div class="col-md-10">
+<div class="header">
+<h3>Bus Routes</h3>
+</div>
+
+<div class="box shadow">
+
+<label>From</label>
+<input type="text" id="from" class="form-control mb-2" placeholder="Enter From City">
+
+<label>To</label>
+<input type="text" id="to" class="form-control mb-2" placeholder="Enter To City">
+
+<div class="form-check mb-3">
+<input type="checkbox" id="active" class="form-check-input" checked>
+<label class="form-check-label">Active Route</label>
+</div>
+
+<button onclick="save()" class="btn btn-success w-100 mb-2">Save Route</button>
+<button onclick="resetForm()" class="btn btn-secondary w-100">Reset</button>
+<p id="routeMsg" class="mt-2 mb-0"></p>
+</div>
+
+<div class="card">
+<h4 class="text-center mb-3">All Routes</h4>
+<div class="table-responsive">
+<table class="table table-bordered text-center">
+<thead>
+<tr><th>Sr No</th><th>From</th><th>To</th><th>Status</th><th>Action</th></tr>
+</thead>
+<tbody id="routesTable"></tbody>
+</table>
+</div>
+</div>
+
+</div>
+
+</div>
+</div>
+<footer style="background:#0c1b33; color:white; text-align:center; padding:15px; position:fixed; bottom:0; width:100%; box-shadow: 0 -2px 5px rgba(0,0,0,0.2);">
+</footer>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+// ================= ➕ ADD ROUTE =================
+// POST /api/admin/routes. route_service.py (backend) re-checks "from != to"
+// and "not a duplicate" again on the server - the same rules the
+// browser already checked, so a request sent outside this page can't
+// skip them.
+async function save(){
+    const from = document.getElementById("from").value.trim();
+    const to = document.getElementById("to").value.trim();
+    const active = document.getElementById("active").checked;
+    const msg = document.getElementById("routeMsg");
+
+    if(!from || !to){ msg.innerText = "Fill all fields"; return; }
+    if(from.toLowerCase() === to.toLowerCase()){ msg.innerText = "From & To cannot be same"; return; }
+
+    const result = await apiRequest("/api/admin/routes", "POST", { from_city: from, to_city: to, active });
+
+    if (result.success) {
+        msg.style.color = "#9effa1";
+        msg.innerText = "✅ " + result.message;
+        resetForm();
+        loadRoutes();
+    } else {
+        msg.style.color = "#ff9e9e";
+        msg.innerText = "❌ " + result.message;
+    }
+}
+
+function resetForm(){
+    document.getElementById("from").value="";
+    document.getElementById("to").value="";
+    document.getElementById("active").checked=true;
+}
+
+// ================= 📋 LIST + TOGGLE =================
+async function loadRoutes(){
+    const result = await apiRequest("/api/admin/routes");
+    const tbody = document.getElementById("routesTable");
+    tbody.innerHTML = "";
+
+    result.routes.forEach((r, i) => {
+        const badgeClass = r.active ? "badge-active" : "badge-inactive";
+        const statusText = r.active ? "Active" : "Inactive";
+        const toggleAction = r.active ? "deactivate" : "activate";
+        const toggleLabel = r.active ? "Deactivate" : "Activate";
+        const toggleBtnClass = r.active ? "btn-secondary" : "btn-success";
+
+        tbody.innerHTML += `
+        <tr>
+            <td>${i + 1}</td>
+            <td>${escapeHtml(r.from_city)}</td>
+            <td>${escapeHtml(r.to_city)}</td>
+            <td><span class="badge ${badgeClass}">${statusText}</span></td>
+            <td><button class="btn btn-sm ${toggleBtnClass}" onclick="toggleRoute(${r.id}, '${toggleAction}')">${toggleLabel}</button></td>
+        </tr>
+        `;
+    });
+}
+
+async function toggleRoute(id, action){
+    await apiRequest(`/api/admin/routes/${id}/${action}`, "POST");
+    loadRoutes();
+}
+
+async function init(){
+    const admin = await requireAdminLogin();
+    if (!admin) return;
+    loadRoutes();
+}
+
+init();
+
+</script>
+{% endblock %}

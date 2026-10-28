@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}Bus Pass Portal{% endblock %}
+
+{% block bootstrap %}{% endblock %}
+
+{% block styles %}
+    * {
+      margin: 0;
+      padding: 0;
+      font-family: Arial;
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)),
+                  url('{{ url_for('static', filename='images/bg-login.jpg') }}') no-repeat center center fixed;
+      background-size: cover;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+    }
+
+    .container {
+      width: 350px;
+      max-width: 92vw;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      text-align: center;
+    }
+
+    h2 { margin-bottom: 15px; color: red; }
+
+    .input-box { margin: 10px 0; }
+
+    .input-box input {
+      color: antiquewhite;
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.6);
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      background: red;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    button:hover { background: #023e8a; }
+
+    .toggle { margin-top: 10px; cursor: pointer; color: red; font-size: 14px; }
+    .hidden { display: none; }
+    .bus { font-size: 40px; margin-bottom: 10px; }
+    .error-msg { color: #ffb3b3; font-size: 13px; margin-top: 8px; min-height: 18px; }
+    .back-link { display:block; margin-top: 14px; color: #ccc; font-size: 13px; }
+  
+{% endblock %}
+
+{% block body %}
+  <div class="container">
+
+    <div class="bus">🚌</div>
+
+    <!-- LOGIN -->
+    <div id="loginForm">
+      <h2>Login</h2>
+
+      <div class="input-box">
+        <input type="email" id="loginEmail" placeholder="Email">
+      </div>
+      <div class="input-box">
+        <input type="password" id="loginPass" placeholder="Password">
+      </div>
+
+      <button onclick="login()">Login</button>
+      <p id="loginMsg" class="error-msg"></p>
+
+      <div class="toggle" onclick="showSignup()">Don't have account? Sign Up</div>
+    </div>
+
+    <!-- SIGNUP -->
+    <div id="signupForm" class="hidden">
+
+      <h2>Sign Up</h2>
+
+      <div class="input-box">
+        <input type="text" id="name" placeholder="Full Name">
+      </div>
+      <div class="input-box">
+        <input type="email" id="email" placeholder="Email">
+      </div>
+      <div class="input-box">
+        <input type="password" id="pass" placeholder="Password">
+      </div>
+      <div class="input-box">
+        <input type="password" id="confirmPass" placeholder="Confirm Password">
+      </div>
+
+      <button onclick="signup()">Sign Up</button>
+      <p id="signupMsg" class="error-msg"></p>
+
+      <div class="toggle" onclick="showLogin()">Already have account? Login</div>
+
+    </div>
+
+    <a class="back-link" href="{{ url_for('index') }}">&larr; Back to Home</a>
+
+  </div>
+
+  
+  
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+    function showSignup() {
+      document.getElementById("loginForm").classList.add("hidden");
+      document.getElementById("signupForm").classList.remove("hidden");
+    }
+
+    function showLogin() {
+      document.getElementById("signupForm").classList.add("hidden");
+      document.getElementById("loginForm").classList.remove("hidden");
+    }
+
+    // ================= ✅ SIGNUP =================
+    // Sends the form to POST /api/signup. The backend re-checks
+    // everything (required fields, email format, password length,
+    // duplicate email) even though we also check it here - never
+    // trust validation done only in the browser.
+    async function signup() {
+      const name = document.getElementById("name").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const pass = document.getElementById("pass").value;
+      const confirmPass = document.getElementById("confirmPass").value;
+      const msg = document.getElementById("signupMsg");
+
+      if (!name) { msg.innerText = "Enter Name"; return; }
+      if (!email || !email.includes("@")) { msg.innerText = "Enter valid Email"; return; }
+      if (pass.length < 6) { msg.innerText = "Password must be 6+ characters"; return; }
+      if (pass !== confirmPass) { msg.innerText = "Passwords do not match"; return; }
+
+      const result = await apiRequest("/api/signup", "POST", {
+        name, email, password: pass, confirm_password: confirmPass,
+      });
+
+      if (result.success) {
+        msg.style.color = "#b6ffb3";
+        msg.innerText = "✅ Signup successful. Please log in.";
+        setTimeout(showLogin, 900);
+      } else {
+        msg.style.color = "#ffb3b3";
+        msg.innerText = "❌ " + result.message;
+      }
+    }
+
+    // ================= ✅ LOGIN =================
+    async function login() {
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPass").value;
+      const msg = document.getElementById("loginMsg");
+
+      if (!email || !password) { msg.innerText = "Enter all fields"; return; }
+
+      const result = await apiRequest("/api/login", "POST", { email, password });
+
+      if (result.success) {
+        window.location.href = "{{ url_for('student_dashboard_page') }}";
+      } else {
+        msg.innerText = "❌ " + result.message;
+      }
+    }
+
+  </script>
+{% endblock %}

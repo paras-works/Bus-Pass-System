@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}My Bus Pass{% endblock %}
+
+{% block styles %}
+body{
+    margin:0;
+    font-family:sans-serif;
+    background: url('{{ url_for('static', filename='images/bg-student.jpeg') }}') no-repeat center center fixed;
+    background-size: cover;
+}
+.topbar{
+    background: rgba(0, 0, 0, 0.5);
+    color:white;
+    padding:6px;
+    overflow:hidden;
+    white-space:nowrap;
+}
+.topbar span{
+    display:inline-block;
+    padding-left:100%;
+    animation:bus 8s linear infinite;
+}
+@keyframes bus{
+    0%{transform:translateX(0);}
+    100%{transform:translateX(-100%);}
+}
+.sidebar{
+   background: rgba(0, 0, 0, 0.5);
+    height:100vh;
+    padding:20px;
+    color:white;
+}
+.sidebar a{
+    display:block;
+    color:white;
+    text-decoration:none;
+    margin:10px 0;
+    padding:8px;
+    border-radius:5px;
+    transition:0.3s;
+}
+.sidebar a:hover{
+    background:#dc3545;
+    transform:translateX(5px);
+}
+.content{ padding:25px; }
+
+.pass-card{
+    max-width: 480px;
+    margin:auto;
+    background: linear-gradient(135deg,#1b2a4a,#0c1b33);
+    color:white;
+    border-radius:16px;
+    padding:25px;
+    box-shadow:0 10px 25px rgba(0,0,0,0.35);
+}
+.pass-card h4{ letter-spacing:1px; }
+.pass-row{ display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed rgba(255,255,255,0.2); }
+.pass-number{ font-size:1.4rem; font-weight:bold; letter-spacing:2px; color:#ffd15c; }
+.no-pass-box{ max-width:480px; margin:auto; background:white; padding:25px; border-radius:10px; text-align:center; }
+
+@media print {
+    .sidebar, .topbar, footer, .no-print { display:none !important; }
+    .content { padding:0; }
+    body{ background:white !important; }
+}
+{% endblock %}
+
+{% block body %}
+<div class="topbar">
+<span>🚌 Bus Pass System • Your Pass 🚌</span>
+</div>
+
+<div class="container-fluid">
+<div class="row">
+
+{% include "_student_sidebar.html" %}
+
+<div class="col-md-10 content">
+
+<div id="noPassBox" class="no-pass-box" style="display:none;">
+    <p>You don't have an active bus pass yet.</p>
+    <a href="{{ url_for('pass_form_page') }}" class="btn btn-danger">Apply for a Pass</a>
+</div>
+
+<div id="passBox" style="display:none;">
+    <div class="pass-card">
+        <h4 class="text-center mb-3">BUS PASS</h4>
+        <div class="pass-row"><span>Pass Number</span><span class="pass-number" id="passNumber"></span></div>
+        <div class="pass-row"><span>Name</span><span id="pName"></span></div>
+        <div class="pass-row"><span>Email</span><span id="pEmail"></span></div>
+        <div class="pass-row"><span>DOB</span><span id="pDob"></span></div>
+        <div class="pass-row"><span>Age</span><span id="pAge"></span></div>
+        <div class="pass-row"><span>Address</span><span id="pAddress"></span></div>
+        <div class="pass-row"><span>Route</span><span id="pRoute"></span></div>
+        <div class="pass-row"><span>Plan</span><span id="pPlan"></span></div>
+        <div class="pass-row"><span>Pass Type</span><span id="pType"></span></div>
+        <div class="pass-row"><span>Valid From</span><span id="pFrom"></span></div>
+        <div class="pass-row"><span>Valid Until</span><span id="pUntil"></span></div>
+        <div class="pass-row"><span>Payment Status</span><span id="pStatus"></span></div>
+    </div>
+
+    <div class="text-center mt-3 no-print">
+        <button class="btn btn-light" onclick="window.print()">🖨️ Print / Download</button>
+    </div>
+</div>
+
+</div>
+
+</div>
+</div>
+<footer style="background: rgba(0, 0, 0, 0.5); color:white; text-align:center; padding:15px; position:fixed; bottom:0; width:100%;" class="no-print">
+</footer>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+// ================= 🎫 LOAD THE GENERATED PASS =================
+// GET /api/my-pass joins bus_passes + pass_requests + routes and
+// (for the student details shown on the pass) student_profiles.
+async function loadPass() {
+    const user = await requireStudentLogin();
+    if (!user) return;
+
+    const result = await apiRequest("/api/my-pass");
+
+    if (!result.success || !result.pass) {
+        document.getElementById("noPassBox").style.display = "block";
+        return;
+    }
+
+    const p = result.pass;
+    const s = result.student || {};
+
+    document.getElementById("passBox").style.display = "block";
+    document.getElementById("passNumber").innerText = p.pass_number;
+    document.getElementById("pName").innerText = s.name || user.name;
+    document.getElementById("pEmail").innerText = user.email;
+    document.getElementById("pDob").innerText = s.dob ? formatDate(s.dob) : "-";
+    document.getElementById("pAge").innerText = s.age || "-";
+    document.getElementById("pAddress").innerText = s.address || "-";
+    document.getElementById("pRoute").innerText = `${p.from_city} → ${p.to_city}`;
+    document.getElementById("pPlan").innerText = p.plan;
+    document.getElementById("pType").innerText = p.pass_type;
+    document.getElementById("pFrom").innerText = formatDate(p.valid_from);
+    document.getElementById("pUntil").innerText = formatDate(p.valid_until);
+    document.getElementById("pStatus").innerText = p.status;
+}
+
+loadPass();
+
+</script>
+{% endblock %}

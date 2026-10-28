@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Bus Pass Form{% endblock %}
+
+{% block styles %}
+body{
+    margin:0;
+    font-family:sans-serif;
+    background: url('{{ url_for('static', filename='images/bg-student.jpeg') }}') no-repeat center center fixed;
+    background-size: cover;
+}
+.topbar{
+    background: rgba(0, 0, 0, 0.5);
+    color:white;
+    padding:6px;
+    overflow:hidden;
+    white-space:nowrap;
+}
+.topbar span{
+    display:inline-block;
+    padding-left:100%;
+    animation:bus 8s linear infinite;
+}
+@keyframes bus{
+    0%{transform:translateX(0);}
+    100%{transform:translateX(-100%);}
+}
+.sidebar{
+   background: rgba(0, 0, 0, 0.5);
+    height:100vh;
+    padding:20px;
+    color:white;
+}
+.sidebar a{
+    display:block;
+    color:white;
+    text-decoration:none;
+    margin:10px 0;
+    padding:8px;
+    border-radius:5px;
+    transition:0.3s;
+}
+.sidebar a:hover{
+    background:#dc3545;
+    transform:translateX(5px);
+}
+.content{
+    padding:25px;
+}
+.card{max-width:500px;margin:auto;}
+{% endblock %}
+
+{% block body %}
+ <div class="topbar">
+<span>🚌 Bus Pass System • Pass Form  🚌</span>
+</div>
+
+<div class="container-fluid">
+<div class="row">
+
+{% include "_student_sidebar.html" %}
+
+<div class="col-md-10 content">
+
+<h3 class="text-primary text-center">BUS PASS FORM</h3>
+
+<div class="card p-3 shadow">
+
+<input type="text" id="studname" class="form-control mb-2" placeholder="Enter Name" disabled>
+
+<label>Route</label>
+<select id="routeSelect" class="form-control mb-2">
+<option value="">Loading routes...</option>
+</select>
+
+<label>Start Date</label>
+<input type="date" id="date1" class="form-control mb-2">
+
+<label>Plan</label>
+<select id="plan" class="form-control mb-2">
+<option value="">Select Plan</option>
+<option>1 Month</option>
+<option>3 Months</option>
+<option>6 Months</option>
+<option>1 Year</option>
+</select>
+
+<label>Pass Type</label>
+<select id="passtyp" class="form-control mb-3">
+<option value="">Select</option>
+<option>Student</option>
+<option>Daily / Regular Commuter Pass</option>
+<option>Senior Citizen Pass</option>
+<option>Disabled (Divyang) Pass</option>
+<option>Tourist / Short-Term Pass</option>
+</select>
+
+<button class="btn btn-danger w-100" onclick="saveData()">Submit</button>
+<p id="formMsg" class="text-danger mt-2"></p>
+
+</div>
+
+</div>
+
+</div>
+</div>
+<footer style="background: rgba(0, 0, 0, 0.5); color:white; text-align:center; padding:15px; position:fixed; bottom:0; width:100%;">
+</footer>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+// ================= 🔐 LOGIN CHECK + 📍 LOAD ROUTES =================
+// Routes used to be hardcoded/read from localStorage on the browser.
+// Now GET /api/routes asks the backend for only the routes the admin
+// has marked active in MySQL - a deactivated route can never be
+// selected here, even if someone edits the page's HTML.
+async function init() {
+    const user = await requireStudentLogin();
+    if (!user) return;
+
+    document.getElementById("studname").value = user.name;
+
+    const result = await apiRequest("/api/routes");
+    const select = document.getElementById("routeSelect");
+    select.innerHTML = '<option value="">Select a route</option>';
+
+    if (result.success && result.routes.length > 0) {
+        result.routes.forEach(r => {
+            const option = document.createElement("option");
+            option.value = r.id;
+            option.text = `${r.from_city} → ${r.to_city}`;
+            select.appendChild(option);
+        });
+    } else {
+        select.innerHTML = '<option value="">No active routes available</option>';
+    }
+}
+
+// ================= 💾 SUBMIT REQUEST =================
+// The end date is NOT calculated here anymore. The browser only
+// sends route_id + start_date + plan + pass_type; the Python backend
+// (pass_service.apply_for_pass) works out the end date itself, so a
+// modified browser request can't fake a longer pass than was paid for.
+async function saveData() {
+    const routeId = document.getElementById("routeSelect").value;
+    const date1 = document.getElementById("date1").value;
+    const plan = document.getElementById("plan").value;
+    const passtyp = document.getElementById("passtyp").value;
+    const msg = document.getElementById("formMsg");
+
+    if (!routeId || !date1 || !plan || !passtyp) {
+        msg.innerText = "Please fill all fields ❗";
+        return;
+    }
+
+    const result = await apiRequest("/api/pass-requests", "POST", {
+        route_id: parseInt(routeId, 10),
+        start_date: date1,
+        plan: plan,
+        pass_type: passtyp,
+    });
+
+    if (result.success) {
+        alert("Request Sent to Admin ✅");
+        window.location.href = "{{ url_for('student_dashboard_page') }}";
+    } else {
+        msg.innerText = "❌ " + result.message;
+    }
+}
+
+init();
+
+</script>
+{% endblock %}

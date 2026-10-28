@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+venv/
+.venv/
+.env
+uploads/profile/*
+!uploads/profile/.gitkeep
+tests/_test_uploads/

@@ -1,0 +1,6 @@
+# Two packages are needed:
+#
+#   Flask                  - the web framework 
+#   mysql-connector-python - the official MySQL driver
+Flask>=3.0,<4.0
+mysql-connector-python>=8.0,<10.0

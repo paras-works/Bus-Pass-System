@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Profile{% endblock %}
+
+{% block styles %}
+body{
+margin:0;
+font-family:sans-serif;
+background: url('{{ url_for('static', filename='images/bg-student.jpeg') }}') no-repeat center center fixed;
+background-size: cover;
+}
+.topbar{
+background: rgba(0, 0, 0, 0.5);
+color:white;
+padding:6px;
+overflow:hidden;
+white-space:nowrap;
+}
+.topbar span{
+display:inline-block;
+padding-left:100%;
+animation:bus 8s linear infinite;
+}
+@keyframes bus{
+0%{transform:translateX(0);}
+100%{transform:translateX(-100%);}
+}
+.sidebar{
+background: rgba(0, 0, 0, 0.5);
+height:100vh;
+padding:20px;
+color:white;
+}
+.sidebar a{
+display:block;
+color:white;
+text-decoration:none;
+margin:10px 0;
+padding:8px;
+border-radius:5px;
+}
+.sidebar a:hover{
+background:#dc3545;
+}
+.content{
+padding:25px;
+}
+.card-box{
+    width: 60%;
+    margin: auto;
+background:white;
+padding:25px;
+border-radius:10px;
+box-shadow:0 4px 10px rgba(0,0,0,0.1);
+text-align:center;
+}
+img{
+border-radius:50%;
+margin-bottom:15px;
+width: 100px;
+height: 100px;
+object-fit: cover;
+}
+button{
+background:#dc3545;
+color:white;
+border:none;
+padding:10px 20px;
+border-radius:5px;
+}
+button:hover{
+background:#bb2d3b;
+}
+{% endblock %}
+
+{% block body %}
+<div class="topbar">
+<span>🚌 Bus Pass System • Your Profile 🚌</span>
+</div>
+
+<div class="container-fluid">
+<div class="row">
+
+{% include "_student_sidebar.html" %}
+
+<div class="col-md-10 content">
+
+<div class="card-box">
+
+<img id="profilePic" src="{{ url_for('static', filename='images/default-avatar.svg') }}" width="100" height="100" alt="Profile photo">
+
+<p><b>Name:</b> <span id="nme"></span></p>
+<p><b>Gender:</b> <span id="gender"></span></p>
+<p><b>College:</b> <span id="college"></span></p>
+<p><b>Email:</b> <span id="email"></span></p>
+<p><b>Phone:</b> <span id="phone"></span></p>
+<p><b>Address:</b> <span id="address"></span></p>
+<p><b>DOB:</b> <span id="dob"></span></p>
+<p><b>Age:</b> <span id="age"></span></p>
+
+<button onclick="goEdit()">Edit Profile</button>
+
+</div>
+
+</div>
+
+</div>
+</div>
+<footer style="background: rgba(0, 0, 0, 0.5); color:white; text-align:center; padding:15px; position:fixed; bottom:0; width:100%;">
+</footer>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+// ================= 📦 LOAD PROFILE FROM MYSQL =================
+// GET /api/profile joins the users row + student_profiles row on
+// the backend and returns one combined object.
+async function loadProfile() {
+    const user = await requireStudentLogin();
+    if (!user) return;
+
+    const result = await apiRequest("/api/profile");
+    if (!result.success) return;
+
+    const data = result.profile;
+
+    document.getElementById("nme").innerText = data.name || "Not Set";
+    document.getElementById("gender").innerText = data.gender || "Not Set";
+    document.getElementById("college").innerText = data.college || "Not Set";
+    document.getElementById("email").innerText = data.email || "Not Set";
+    document.getElementById("phone").innerText = data.phone || "Not Set";
+    document.getElementById("address").innerText = data.address || "Not Set";
+    document.getElementById("dob").innerText = data.dob ? formatDate(data.dob) : "Not Set";
+    document.getElementById("age").innerText = data.age || "Not Set";
+
+    if (data.photo_path) {
+        document.getElementById("profilePic").src = data.photo_path;
+    }
+}
+
+function goEdit(){
+    window.location.href = "{{ url_for('update_profile_page') }}";
+}
+
+loadProfile();
+
+</script>
+{% endblock %}

@@ -1,0 +1,51 @@
+/* =====================================================================
+   responsive.css
+   Small extra rules loaded by every page (see templates/base.html) so the
+   site is usable on phones and tablets. The desktop look is unchanged -
+   everything inside @media (max-width: 767.98px) only applies to small
+   screens. Bootstrap's "md" breakpoint is 768px, which is where the
+   sidebar and the content area stop sitting side by side.
+   ===================================================================== */
+
+/* The thin bar fixed to the bottom of every page would otherwise cover
+   the last lines of content - leave room for it. */
+.col-md-10 { padding-bottom: 60px; }
+ 
+/* Student pages have a 36px strip on top, and the sidebar under it was a full
+   screen tall, so every page scrolled by 36px. Make it screen height minus the strip. */
+@media (min-width: 768px) {
+    .topbar ~ .container-fluid .sidebar { height: calc(100vh - 36px) !important; }
+}
+ 
+@media print {
+    .col-md-10 { padding-bottom: 0 !important; }
+}
+ 
+@media (max-width: 767.98px) {
+ 
+    /* Sidebar: turn the tall vertical menu into a compact wrapping row of buttons. */
+    .sidebar {
+        height: auto !important;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 12px 14px !important;
+    }
+    .sidebar h4 {
+        width: 100%;
+        margin-bottom: 6px !important;
+        font-size: 1.1rem;
+    }
+    .sidebar a {
+        margin: 0 !important;
+        padding: 6px 10px !important;
+        background: rgba(255, 255, 255, 0.12);
+    }
+    .sidebar a:hover { transform: none !important; }
+ 
+    /* Less empty space around the page content, and full-width cards. */
+    .content, .form { padding: 15px !important; }
+    .card-box { width: 100% !important; }
+    .col-md-10 { padding-bottom: 60px !important; }
+}
+ 

@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Update Profile{% endblock %}
+
+{% block styles %}
+        body {
+            margin: 0;
+            font-family: sans-serif;
+            background: url('{{ url_for('static', filename='images/bg-student.jpeg') }}') no-repeat center center fixed;
+            background-size: cover;
+        }
+        .topbar {
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 6px;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .topbar span {
+            display: inline-block;
+            padding-left: 100%;
+            animation: bus 8s linear infinite;
+        }
+        @keyframes bus {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+        .sidebar {
+            background: rgba(0, 0, 0, 0.5);
+            height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+        .sidebar a {
+            display: block;
+            color: white;
+            text-decoration: none;
+            margin: 10px 0;
+            padding: 8px;
+            border-radius: 5px;
+            transition: 0.3s;
+        }
+        .sidebar a:hover { background: #dc3545; transform: translateX(5px); }
+        .form { padding: 30px; }
+        .card-box {
+            width: 70%;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            margin: auto;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px;
+            width: 100%;
+            border-radius: 5px;
+        }
+        button:hover { background: #bb2d3b; }
+        #saveMsg { min-height: 20px; }
+    
+{% endblock %}
+
+{% block body %}
+    <div class="topbar">
+        <span>🚌 Bus Pass System • Update Profile • Fast & Easy 🚌</span>
+    </div>
+
+    <div class="container-fluid">
+        <div class="row">
+
+            {% include "_student_sidebar.html" %}
+
+            <div class="col-md-10 form">
+                <div class="card-box">
+                    <h3 class="mb-3">Edit Profile</h3>
+
+                    <input type="file" id="photo" accept="image/png,image/jpeg,image/webp">
+
+                    <input type="text" id="nme" placeholder="Enter your Name">
+
+                    <label>Select Gender</label>
+                    <select id="gender">
+                        <option>Male</option>
+                        <option>Female</option>
+                    </select>
+
+                    <input type="text" id="college" placeholder="College">
+                    <input type="tel" id="phone" placeholder="Phone">
+                    <textarea id="address" placeholder="Address"></textarea>
+
+                    <label>Date of Birth</label>
+                    <input type="date" id="dob">
+                    <input type="number" id="age" placeholder="Age">
+
+                    <button onclick="save()">Save Profile</button>
+                    <p id="saveMsg" class="text-danger mt-2"></p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <footer style="background: rgba(0, 0, 0, 0.5); color:white; text-align:center; padding:10px; position:fixed; bottom:0; width:100%;"></footer>
+
+    
+    
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+        // ================= 📥 LOAD EXISTING DATA =================
+        async function loadData() {
+            const user = await requireStudentLogin();
+            if (!user) return;
+
+            const result = await apiRequest("/api/profile");
+            if (!result.success) return;
+
+            const old = result.profile;
+            document.getElementById("nme").value = old.name || "";
+            document.getElementById("gender").value = old.gender || "Male";
+            document.getElementById("college").value = old.college || "";
+            document.getElementById("phone").value = old.phone || "";
+            document.getElementById("address").value = old.address || "";
+            document.getElementById("dob").value = old.dob || "";
+            document.getElementById("age").value = old.age || "";
+        }
+
+        // ================= 💾 SAVE PROFILE =================
+        // Sent as multipart/form-data (not JSON) because it may include
+        // a file. FormData automatically builds the right request body;
+        // the browser sets the Content-Type + boundary header for us.
+        async function save() {
+            const nme = document.getElementById("nme").value.trim();
+            const phone = document.getElementById("phone").value.trim();
+            const address = document.getElementById("address").value.trim();
+            const age = document.getElementById("age").value;
+            const msg = document.getElementById("saveMsg");
+
+            if (!nme) { msg.innerText = "Enter Name"; return; }
+            if (phone.length !== 10 || isNaN(phone)) { msg.innerText = "Enter a valid 10 digit phone number"; return; }
+            if (!address) { msg.innerText = "Enter Address"; return; }
+            if (!age || age <= 0) { msg.innerText = "Enter a valid Age"; return; }
+
+            const formData = new FormData();
+            formData.append("name", nme);
+            formData.append("gender", document.getElementById("gender").value);
+            formData.append("college", document.getElementById("college").value.trim());
+            formData.append("phone", phone);
+            formData.append("address", address);
+            formData.append("dob", document.getElementById("dob").value);
+            formData.append("age", age);
+
+            const photoFile = document.getElementById("photo").files[0];
+            if (photoFile) {
+                formData.append("photo", photoFile);
+            }
+
+            const result = await apiRequest("/api/profile", "POST", formData);
+
+            if (result.success) {
+                window.location.href = "{{ url_for('profile_page') }}";
+            } else {
+                msg.innerText = "❌ " + result.message;
+            }
+        }
+
+        loadData();
+
+    </script>
+{% endblock %}

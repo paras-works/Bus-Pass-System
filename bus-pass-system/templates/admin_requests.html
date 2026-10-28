@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Pass Requests{% endblock %}
+
+{% block styles %}
+        body{
+    margin:0;
+    font-family:sans-serif;
+    background:#fff;
+    color:white;
+}
+.sidebar{
+    background:#0a1628;
+    height:100vh;
+    color:white;
+    padding:20px;
+}
+.sidebar h4{
+    margin-bottom:20px;
+}
+.sidebar a{
+    display:block;
+    color:white;
+    text-decoration:none;
+    margin:10px 0;
+    padding:8px;
+    border-radius:5px;
+    transition:0.2s;
+}
+.sidebar a:hover{
+    background:#0d6efd;
+}
+.header{
+    background:#0a1628;
+    color:white;
+    padding:10px;
+    text-align:center;
+    border-radius:5px;
+    margin-bottom:20px;
+}
+        .card {
+            background: #1c2a48;
+            border-radius: 12px;
+            padding: 15px;
+        }
+        .table thead { background: #24365b; color: white; }
+        .table tbody tr:nth-child(even) { background: #1c2a48; color: white; }
+        .table tbody tr:nth-child(odd) { background: #2a3a5a; color: white; }
+        .btn-accept { background: #0d6efd; border: none; color: white; }
+        .btn-reject { background: #ffc107; border: none; color: black; }
+        .btn-delete { background: #dc3545; border: none; color: white; }
+        .badge-pending{background:#6c757d;}
+        .badge-approved{background:#0d6efd;}
+        .badge-rejected{background:#dc3545;}
+        .badge-paid{background:#198754;}
+    
+{% endblock %}
+
+{% block body %}
+    <div class="container-fluid">
+        <div class="row">
+
+            {% include "_admin_sidebar.html" %}
+
+            <div class="col-md-10 content">
+                <div class="header">
+                    <h3>Student Requests</h3>
+                </div>
+                <div class="card">
+                    <h4 class="text-center mb-3">Pass Requests</h4>
+
+                    <div class="table-responsive">
+<table class="table table-bordered text-center">
+                        <thead>
+                            <tr>
+                                <th>Sr No</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Route</th>
+                                <th>Start &rarr; End</th>
+                                <th>Plan</th>
+                                <th>Pass Type</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="requestsTable"></tbody>
+                    </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+<footer style="background:#0c1b33; color:white; text-align:center; padding:15px; position:fixed; bottom:0; width:100%; box-shadow: 0 -2px 5px rgba(0,0,0,0.2);">
+</footer>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+// ================= 📋 LOAD ALL REQUESTS FROM MYSQL =================
+// GET /api/admin/pass-requests joins pass_requests + users + routes,
+// so every row already has the student's name/email and the route.
+async function loadRequests() {
+    const admin = await requireAdminLogin();
+    if (!admin) return;
+
+    const result = await apiRequest("/api/admin/pass-requests");
+    const tbody = document.getElementById("requestsTable");
+    tbody.innerHTML = "";
+
+    result.requests.forEach((r, i) => {
+        const badgeClass = "badge-" + r.status;
+
+        let actions = "-";
+        if (r.status === "pending") {
+            actions = `
+                <button class="btn btn-accept btn-sm" onclick="decide(${r.id}, 'approve')">Accept</button>
+                <button class="btn btn-reject btn-sm" onclick="decide(${r.id}, 'reject')">Reject</button>
+                <button class="btn btn-delete btn-sm" onclick="removeReq(${r.id})">Delete</button>
+            `;
+        } else if (r.status === "rejected") {
+            actions = `<button class="btn btn-delete btn-sm" onclick="removeReq(${r.id})">Delete</button>`;
+        }
+
+        tbody.innerHTML += `
+        <tr>
+            <td>${i + 1}</td>
+            <td>${escapeHtml(r.student_name)}</td>
+            <td>${escapeHtml(r.student_email)}</td>
+            <td>${escapeHtml(r.from_city)} → ${escapeHtml(r.to_city)}</td>
+            <td>${formatDate(r.start_date)} to ${formatDate(r.end_date)}</td>
+            <td>${escapeHtml(r.plan)}</td>
+            <td>${escapeHtml(r.pass_type)}</td>
+            <td><span class="badge ${badgeClass}">${r.status}</span></td>
+            <td>${actions}</td>
+        </tr>
+        `;
+    });
+}
+
+// ================= ✅ APPROVE / ❌ REJECT =================
+// Both call POST /api/admin/pass-requests/<id>/approve|reject, which
+// re-checks on the SERVER that the request is still 'pending' before
+// changing anything (see pass_service.py) - the frontend buttons are
+// just a convenience, not the actual security boundary.
+async function decide(id, action) {
+    const result = await apiRequest(`/api/admin/pass-requests/${id}/${action}`, "POST");
+    alert(result.message);
+    loadRequests();
+}
+
+async function removeReq(id) {
+    if (!confirm("Are you sure to delete this request?")) return;
+    const result = await apiRequest(`/api/admin/pass-requests/${id}`, "DELETE");
+    alert(result.message);
+    loadRequests();
+}
+
+loadRequests();
+
+</script>
+{% endblock %}

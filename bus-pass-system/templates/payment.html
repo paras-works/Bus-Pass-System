@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Payment{% endblock %}
+
+{% block styles %}
+body{
+    margin:0;
+    font-family:sans-serif;
+    background: url('{{ url_for('static', filename='images/bg-student.jpeg') }}') no-repeat center center fixed;
+    background-size: cover;
+}
+.topbar{
+    background: rgba(0, 0, 0, 0.5);
+    color:white;
+    padding:6px;
+    overflow:hidden;
+    white-space:nowrap;
+}
+.topbar span{
+    display:inline-block;
+    padding-left:100%;
+    animation:bus 8s linear infinite;
+}
+@keyframes bus{
+    0%{transform:translateX(0);}
+    100%{transform:translateX(-100%);}
+}
+.sidebar{
+   background: rgba(0, 0, 0, 0.5);
+    height:100vh;
+    padding:20px;
+    color:white;
+}
+.sidebar a{
+    display:block;
+    color:white;
+    text-decoration:none;
+    margin:10px 0;
+    padding:8px;
+    border-radius:5px;
+    transition:0.3s;
+}
+.sidebar a:hover{
+    background:#dc3545;
+    transform:translateX(5px);
+}
+.content{ padding:25px; }
+.card-box{
+    max-width:480px;
+    margin:auto;
+    background:white;
+    padding:25px;
+    border-radius:10px;
+    box-shadow:0 4px 10px rgba(0,0,0,0.1);
+}
+.method-box{
+    display:flex;
+    gap:15px;
+    margin-bottom:15px;
+    flex-wrap: wrap;
+}
+.method-box img{
+    width:60px;
+    height:40px;
+    object-fit:contain;
+    border:2px solid #ddd;
+    border-radius:6px;
+    padding:5px;
+    cursor:pointer;
+}
+.method-box img.selected{
+    border-color:#dc3545;
+}
+.notice{
+    font-size: 0.85rem;
+    color:#6c757d;
+    margin-top: 10px;
+}
+{% endblock %}
+
+{% block body %}
+<div class="topbar">
+<span>🚌 Bus Pass System • Payment 🚌</span>
+</div>
+
+<div class="container-fluid">
+<div class="row">
+
+{% set show_payment_link = true %}
+{% include "_student_sidebar.html" %}
+
+<div class="col-md-10 content">
+
+<div class="card-box">
+
+<h3 class="mb-3">Complete Payment</h3>
+
+<div id="noRequestBox" style="display:none;">
+    <p>You don't have an approved request waiting for payment.</p>
+    <a href="{{ url_for('student_dashboard_page') }}" class="btn btn-secondary">Back to Dashboard</a>
+</div>
+
+<div id="payBox" style="display:none;">
+    <p><b>Route:</b> <span id="routeText"></span></p>
+    <p><b>Plan:</b> <span id="planText"></span></p>
+    <p><b>Amount:</b> ₹<span id="amountText"></span></p>
+
+    <label>Select Payment Method</label>
+    <div class="method-box">
+        <img src="{{ url_for('static', filename='images/upi.png') }}" alt="UPI" onclick="selectMethod('UPI', this)">
+        <img src="{{ url_for('static', filename='images/gpay.jpg') }}" alt="GPay" onclick="selectMethod('GPay', this)">
+        <img src="{{ url_for('static', filename='images/paytm.png') }}" alt="Paytm" onclick="selectMethod('Paytm', this)">
+        <img src="{{ url_for('static', filename='images/CDCard.jpg') }}" alt="Card" onclick="selectMethod('Card', this)">
+    </div>
+
+    <button class="btn btn-danger w-100" onclick="pay()">Pay Now</button>
+    <p id="payMsg" class="text-danger mt-2"></p>
+
+    <p class="notice">Payment simulation for academic/portfolio purposes; no real money is processed.</p>
+</div>
+
+</div>
+
+</div>
+
+</div>
+</div>
+<footer style="background: rgba(0, 0, 0, 0.5); color:white; text-align:center; padding:15px; position:fixed; bottom:0; width:100%;">
+</footer>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+// Mirrors PLAN_PRICES in pass_service.py - shown here only for
+// display before paying. The AMOUNT THAT ACTUALLY GETS CHARGED is
+// decided again on the server in pay_for_request(), using the
+// request's plan - the browser's number is never trusted.
+const PLAN_PRICES = { "1 Month": 500, "3 Months": 1400, "6 Months": 2500, "1 Year": 4500 };
+
+let currentRequestId = null;
+let selectedMethod = null;
+
+async function init() {
+    const user = await requireStudentLogin();
+    if (!user) return;
+
+    const result = await apiRequest("/api/pass-requests/my");
+    const approved = result.requests.find(r => r.status === "approved");
+
+    if (!approved) {
+        document.getElementById("noRequestBox").style.display = "block";
+        return;
+    }
+
+    currentRequestId = approved.id;
+    document.getElementById("payBox").style.display = "block";
+    document.getElementById("routeText").innerText = `${approved.from_city} → ${approved.to_city}`;
+    document.getElementById("planText").innerText = approved.plan;
+    document.getElementById("amountText").innerText = PLAN_PRICES[approved.plan] || "-";
+}
+
+function selectMethod(method, el) {
+    selectedMethod = method;
+    document.querySelectorAll(".method-box img").forEach(img => img.classList.remove("selected"));
+    el.classList.add("selected");
+}
+
+// ================= 💳 SIMULATED PAYMENT =================
+// POST /api/payments does everything server-side in one step:
+// checks the request is still 'approved', checks it wasn't paid
+// already, records the payment, marks the request 'paid', and
+// generates the bus pass row - all inside pass_service.pay_for_request().
+async function pay() {
+    const msg = document.getElementById("payMsg");
+
+    if (!selectedMethod) { msg.innerText = "Select a payment method"; return; }
+
+    const result = await apiRequest("/api/payments", "POST", {
+        request_id: currentRequestId,
+        payment_method: selectedMethod,
+    });
+
+    if (result.success) {
+        alert(`✅ Payment successful! Pass Number: ${result.data.pass_number}`);
+        window.location.href = "{{ url_for('my_pass_page') }}";
+    } else {
+        msg.innerText = "❌ " + result.message;
+    }
+}
+
+init();
+
+</script>
+{% endblock %}

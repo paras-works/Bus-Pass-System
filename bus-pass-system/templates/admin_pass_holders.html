@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Pass Holders{% endblock %}
+
+{% block styles %}
+        body {
+            margin: 0;
+            font-family: sans-serif;
+            background: #fff;
+            color: white;
+        }
+        .sidebar {
+            background: #0a1628;
+            height: 100vh;
+            color: white;
+            padding: 20px;
+        }
+        .sidebar h4 { margin-bottom: 20px; }
+        .sidebar a {
+            display: block;
+            color: white;
+            text-decoration: none;
+            margin: 10px 0;
+            padding: 8px;
+            border-radius: 5px;
+            transition: 0.2s;
+        }
+        .sidebar a:hover { background: #0d6efd; }
+        .header {
+            background: #0a1628;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .table-container {
+            background: #1c2a48;
+            padding: 20px;
+            border-radius: 10px;
+            overflow-x: auto;
+        }
+        .table th { background: #24365b; }
+        .table td, .table th { color: white; vertical-align: middle; }
+    
+{% endblock %}
+
+{% block body %}
+    <div class="container-fluid">
+        <div class="row">
+
+            {% include "_admin_sidebar.html" %}
+
+            <div class="col-md-10">
+
+                <div class="header">
+                    <h3>Valid Pass Holders</h3>
+                </div>
+
+                <div class="table-container">
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Pass ID</th>
+                                <th>Name</th>
+                                <th>DOB</th>
+                                <th>Age</th>
+                                <th>Address</th>
+                                <th>Email</th>
+                                <th>Route</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Plan</th>
+                                <th>Type</th>
+                            </tr>
+                        </thead>
+                        <tbody id="data"></tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <footer style="background:#0c1b33; color:white; text-align:center; padding:15px; position:fixed; bottom:0; width:100%; box-shadow: 0 -2px 5px rgba(0,0,0,0.2);">
+    </footer>
+
+    
+    
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+        // ================= 🎫 LOAD PASS HOLDERS FROM MYSQL =================
+        // GET /api/admin/pass-holders joins bus_passes with users,
+        // student_profiles, pass_requests and routes in ONE query -
+        // everything a "valid pass holder" row needs comes back together.
+        async function loadPassHolders() {
+            const admin = await requireAdminLogin();
+            if (!admin) return;
+
+            const result = await apiRequest("/api/admin/pass-holders");
+            const table = document.getElementById("data");
+            table.innerHTML = "";
+
+            if (!result.pass_holders || result.pass_holders.length === 0) {
+                table.innerHTML = `<tr><td colspan="11" class="text-center">No Pass Holders</td></tr>`;
+                return;
+            }
+
+            result.pass_holders.forEach(function (r) {
+                const row = `
+<tr>
+    <td>${escapeHtml(r.pass_number)}</td>
+    <td>${escapeHtml(r.student_name)}</td>
+    <td>${r.dob ? formatDate(r.dob) : "-"}</td>
+    <td>${r.age || "-"}</td>
+    <td>${escapeHtml(r.address) || "-"}</td>
+    <td>${escapeHtml(r.student_email)}</td>
+    <td>${escapeHtml(r.from_city)} → ${escapeHtml(r.to_city)}</td>
+    <td>${formatDate(r.valid_from)}</td>
+    <td>${formatDate(r.valid_until)}</td>
+    <td>${escapeHtml(r.plan)}</td>
+    <td>${escapeHtml(r.pass_type)}</td>
+</tr>`;
+                table.innerHTML += row;
+            });
+        }
+
+        loadPassHolders();
+
+    </script>
+{% endblock %}

@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block styles %}
+body{
+    margin:0;
+    font-family:sans-serif;
+    background:#fff;
+    color:white;
+}
+.sidebar{
+    background:#0a1628;
+    height:100vh;
+    color:white;
+    padding:20px;
+}
+.sidebar h4{ margin-bottom:20px; }
+.sidebar a{
+    display:block;
+    color:white;
+    text-decoration:none;
+    margin:10px 0;
+    padding:8px;
+    border-radius:5px;
+    transition:0.2s;
+}
+.sidebar a:hover{ background:#0d6efd; }
+.header{
+    background:#0a1628;
+    color:white;
+    padding:10px;
+    text-align:center;
+    border-radius:5px;
+    margin-bottom:20px;
+}
+.card-box{
+    background:#1c2a48;
+    padding:30px;
+    border-radius:10px;
+    text-align:center;
+    cursor:pointer;
+    transition:0.3s;
+    margin-bottom:20px;
+}
+.card-box:hover{ transform:scale(1.05); background:#24365b; }
+.stat-box{
+    background:#1c2a48;
+    padding:20px;
+    border-radius:10px;
+    text-align:center;
+    margin-bottom:20px;
+}
+.stat-box .num{ font-size:1.8rem; font-weight:bold; color:#4dabf7; }
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+<div class="row">
+
+{% include "_admin_sidebar.html" %}
+
+<div class="col-md-10">
+<div class="header">
+<h3>Admin Dashboard</h3>
+</div>
+
+<!-- ============ 📊 LIVE STATS FROM MYSQL ============ -->
+<div class="row" id="statsRow">
+</div>
+
+<div class="row mt-2">
+<div class="col-md-6">
+<div class="card-box" onclick="go('{{ url_for('admin_pass_holders_page') }}')">
+<h4>👤 Student Information</h4>
+<p>View all student profiles</p>
+</div>
+</div>
+
+<div class="col-md-6">
+<div class="card-box" onclick="go('{{ url_for('admin_requests_page') }}')">
+<h4>🚌 Pass Requests</h4>
+<p>Approve / Reject requests</p>
+</div>
+</div>
+</div>
+
+<div class="row mt-4">
+<div class="col-md-6">
+<div class="card-box" onclick="go('{{ url_for('admin_routes_page') }}')">
+<h4>📍 Add Routes</h4>
+<p>Manage bus routes</p>
+</div>
+</div>
+
+<div class="col-md-6">
+<div class="card-box" onclick="go('{{ url_for('admin_payments_page') }}')">
+<h4>📊 Paid</h4>
+<p>View all paid payments</p>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+
+<footer style="background:#0c1b33; color:white; text-align:center; padding:15px; position:fixed; bottom:0; width:100%; box-shadow: 0 -2px 5px rgba(0,0,0,0.2);">
+</footer>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+function go(page){ window.location.href = page; }
+
+// ================= 📊 LOAD DASHBOARD STATS =================
+// GET /api/admin/dashboard-stats runs a handful of COUNT()/SUM()
+// queries against MySQL - the cards are never hardcoded numbers.
+async function loadStats() {
+    const admin = await requireAdminLogin();
+    if (!admin) return;
+
+    const result = await apiRequest("/api/admin/dashboard-stats");
+    if (!result.success) return;
+
+    const s = result.stats;
+    const statsRow = document.getElementById("statsRow");
+
+    const cards = [
+        { label: "Total Students", value: s.total_students },
+        { label: "Pending Requests", value: s.pending_requests },
+        { label: "Approved Requests", value: s.approved_requests },
+        { label: "Paid Passes", value: s.paid_passes },
+        { label: "Total Routes", value: s.total_routes },
+        { label: "Total Revenue", value: "₹" + s.total_revenue },
+    ];
+
+    statsRow.innerHTML = cards.map(c => `
+        <div class="col-md-2 col-sm-4 col-6">
+            <div class="stat-box">
+                <div class="num">${c.value}</div>
+                <div>${c.label}</div>
+            </div>
+        </div>
+    `).join("");
+}
+
+loadStats();
+
+</script>
+{% endblock %}
